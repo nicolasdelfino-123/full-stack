@@ -68,7 +68,7 @@ def obtender_producto_por_id(producto_id):
     return jsonify(producto_dict), 200
 ##########################################"""
 
-from flask import Flask, jsonify, request
+"""from flask import Flask, jsonify, request
 import psycopg2
 
 
@@ -132,11 +132,81 @@ def get_producto_id(producto_id):
         return jsonify({"error":"producto no encontrado"}), 404
 
     return jsonify(fila_a_dict(fila)), 200
+"""
+#############################################################3
+from flask import Flask, jsonify, request
+import psycopg2
+
+apps = Flask(__name__)
+
+def get_connection():
+    return psycopg2.connect(
+        host="localhost",
+        database="nico_fullstack",
+        user="postgres",
+        password="1234"
+    )
+
+def fila_a_dict(fila):
+    if fila is None:
+        return None
+    
+    productos = {
+        "id": fila[0],
+        "nombre": fila[1],
+        "precio": float(fila[2]),
+        "stock": fila[3],
+    }
+
+    return productos
+@apps.route('/productos', methods=['GET'])
+def get_productos():
+    conexion = get_connection()
+    cursor = conexion.cursor()
+    
+    consulta = 'SELECT id, nombre, precio, stock FROM productos;'
+    cursor.execute(consulta)
+
+    filas = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    resultado_dict = []
+    for fila in filas:
+        resultado_dict.append(fila_a_dict(fila))
+    return jsonify(resultado_dict), 200
+
+@apps.route('/productos/<int:producto_id>', methods=['GET'])
+def get_producto_id(producto_id):
+    conexion = get_connection()
+    cursor = conexion.cursor()
+
+    consulta = 'SELECT id, nombre, precio, stock FROM productos WHERE id = %s'
+    cursor.execute(consulta,(producto_id,))
+
+    resultado = cursor.fetchone()
+
+    cursor.close()
+    conexion.close()
+
+    if resultado is None:
+        return jsonify({'error': ' producto no encontrado'}), 404
+    return jsonify(fila_a_dict(resultado)), 200
+
+
+if __name__ == '__main__':
+    apps.run(debug=True)
+
+
+
+
+
 
 
 
 ##################################3
-@app.route('/productos', methods=['POST'])
+""" @app.route('/productos', methods=['POST'])
 def crear_producto():
     datos = request.get_json()
     
@@ -145,6 +215,6 @@ def crear_producto():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True) """
 
 

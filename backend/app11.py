@@ -408,6 +408,7 @@ def crear_producto():
     # 1) Leer el body JSON que manda el cliente.
     #    - request.get_json() lee el cuerpo de la petición HTTP.
     #    - Flask espera que el Content-Type sea application/json.
+    # trae el json del frontend y lo convierte a dict
     datos = request.get_json()
 
     # 2) Extraer los campos del diccionario 'datos'.
