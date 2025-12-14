@@ -195,6 +195,37 @@ def get_producto_id(producto_id):
     return jsonify(fila_a_dict(resultado)), 200
 
 
+@apps.route('/productos', methods=['POST'])
+def crear_producto():
+    datos = request.get_json()
+
+    nombre = datos.get('nombre')
+    precio = datos.get('precio')
+    stock = datos.get('stock')
+
+    if nombre is None or precio is None or stock is None:
+        return jsonify({"error": 'falta alguno de los campos obligatorios'}), 400
+    
+    conexion = get_connection()
+    cursor = conexion.cursor()
+
+    consulta_sql = """
+        INSERT INTO productos(nombre,precio,stock)
+        VALUES(%s, %s, %s)
+        RETURNING id, nombre, precio, stock
+        """
+    cursor.execute(consulta_sql,(nombre,precio,stock))
+
+    fila = cursor.fetchone()
+
+    conexion.commit()
+    
+    cursor.close()
+    conexion.close()
+
+    return jsonify(fila_a_dict(fila)), 201
+
+
 if __name__ == '__main__':
     apps.run(debug=True)
 
