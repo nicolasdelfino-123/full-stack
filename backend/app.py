@@ -30,7 +30,7 @@ def get_productos():
     conexion = get_connection()
     cursor = conexion.cursor()
 
-    consulta = 'SELECT nombre, precio, stock FROM productos;'
+    consulta = 'SELECT id, nombre, precio, stock FROM productos;'
 
     cursor.execute(consulta)
 
@@ -117,4 +117,11 @@ def editar_producto(producto_id):
     if fila_existe is None:
         return jsonify({'error': 'producto no encontrado'}), 404
     
-    consulta_upadte = 'UPDATE '
+    consulta_update = """
+        UPDATE productos
+        SET nombre = %s,
+            precio = %s,
+            stock = %s
+        WHERE id = %s
+        RETURNING id, nombre, precio, stock;
+    """
