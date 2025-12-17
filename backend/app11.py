@@ -475,7 +475,7 @@ def actualizar_producto(producto_id):
     }
 
     Flujo:
-    1. Leer JSON.
+    1. Leer JSON y extraer los datos.
     2. Verificar que el producto exista.
     3. Si no existe -> 404.
     4. Si existe -> UPDATE con nuevos valores.
