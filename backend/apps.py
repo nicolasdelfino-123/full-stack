@@ -59,37 +59,45 @@ def get_producto_id(producto_id):
     return jsonify(fila_a_dict(resultado)), 200
 
 
-@apps.route('/productos', methods=['POST'])
+@app.route('/productos', methods=['POST'])
 def crear_producto():
-    datos = request.get_json()
+    datos = request.get_json() or {}
 
-    nombre = datos.get('nombre')
-    precio = datos.get('precio')
-    stock = datos.get('stock')
+    campos = ('nombre', 'precio', 'stock')
 
-    #######################################
+    # 1️⃣ validar body
+    if any(datos.get(campo) is None for campo in campos):
+        return jsonify({'error': 'faltan campos obligatorios'}), 400
 
-    if nombre is None or precio is None or stock is None:
-        return jsonify({"error": 'falta alguno de los campos obligatorios'}), 400
-    
     conexion = get_connection()
     cursor = conexion.cursor()
 
+    # 2️⃣ insertar
     consulta_sql = """
-        INSERT INTO productos(nombre,precio,stock)
-        VALUES(%s, %s, %s)
-        RETURNING id, nombre, precio, stock
-        """
-    cursor.execute(consulta_sql,(nombre,precio,stock))
+        INSERT INTO productos (nombre, precio, stock)
+        VALUES (%s, %s, %s)
+        RETURNING id, nombre, precio, stock;
+    """
+
+    valores = []
+    for campo in campos:
+        valores.append(datos[campo])
+
+    cursor.execute(
+        consulta_sql,
+        valores
+    )
 
     fila = cursor.fetchone()
 
+    # 3️⃣ commit
     conexion.commit()
-    
+
     cursor.close()
     conexion.close()
 
     return jsonify(fila_a_dict(fila)), 201
+
 
 @apps.route('/productos/<int:producto_id>', methods=['PUT'])
 def editar_producto(producto_id):

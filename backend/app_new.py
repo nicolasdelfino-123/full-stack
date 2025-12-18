@@ -1,29 +1,15 @@
 @app3.route('/productos<int:producto_id>', methods=['PUT'])
 def editar_producto(producto_id):
-    datos = request.get_json()
+    datos = request.get_json() or {}
 
     campos = ('nombre', 'precio', 'stock')
 
     if any(datos.get(campo) is None for campo in campos):
         return jsonify({'error': 'faltan campos obligatorios'}), 400
 
-    
     conexion = get_connection()
     cursor = conexion.cursor()
 
-    consulta_existe = 'SELECT id, nombre, stock, precio FROM productos WHERE id = %s;'
-
-    cursor.execute(consulta_existe,(producto_id,))
-
-    fila_existe = cursor.fetchone()
-
-    conexion.commit()
-
-    if fila_existe is None:
-        cursor.close()
-        conexion.close()
-        return jsonify({'error': 'producto no encontrado'}), 404
-    
     consulta_update = """
         UPDATE productos
         SET nombre = %s,
@@ -32,8 +18,11 @@ def editar_producto(producto_id):
         WHERE id = %s
         RETURNING id, nombre, stock, precio;
         """
-    valores = tuple(datos[campo] for campo in campos)
+    valores = []
+    for campo in campos:
+        valores.append(campos[campo])
 
+ 
     cursor.execute(
         consulta_update,
         (*valores, producto_id)

@@ -33,7 +33,7 @@ def crear_producto():
 
     return jsonify(fila_a_dict(fila)), 201
 
-@app.rout('/productos<int: producto_id>', methods=['PUT'])
+@app.route('/productos/<int:producto_id>', methods=['PUT'])
 def editar_producto(producto_id):
     datos = request.get_json()
 
@@ -43,31 +43,29 @@ def editar_producto(producto_id):
 
     if nombre is None or precio is None or stock is None:
         return jsonify({'error': 'faltan datos obligatorios'}), 400
-    
-    cursor = get_connection()
-    conexion = conexion.cursor()
 
-    consulta = 'SELECT id FROM productos WHERE id = %s;'
+    conexion = get_connection()
+    cursor = conexion.cursor()
 
-    cursor.execute(consulta,(producto_id,))
-
+    # validar existencia
+    cursor.execute('SELECT id FROM productos WHERE id = %s;', (producto_id,))
     fila_existe = cursor.fetchone()
 
     if fila_existe is None:
         cursor.close()
         conexion.close()
-        return jsonify({'error': 'no existe el producto con ese id'}),404
-    
-    consulta_update = """
-            UPDATE productos
-            SET nombre = %s
-                precio = %s
-                stock = %s
-            FROM productos
-            WHERE id = %s;
-            """ 
-    cursor.execute(consulta_update,(nombre, precio, stock, producto_id))
+        return jsonify({'error': 'no existe el producto con ese id'}), 404
 
+    # update
+    consulta_update = """
+        UPDATE productos
+        SET nombre = %s,
+            precio = %s,
+            stock = %s
+        WHERE id = %s
+        RETURNING id, nombre, precio, stock;
+    """
+    cursor.execute(consulta_update, (nombre, precio, stock, producto_id))
     fila_update = cursor.fetchone()
 
     conexion.commit()
@@ -76,3 +74,30 @@ def editar_producto(producto_id):
     conexion.close()
 
     return jsonify(fila_a_dict(fila_update)), 200
+
+@app.route('/productos/<int:producto_id>', methods=['DELETE'])
+def eliminar_producto(producto_id):
+    
+    conexion =  get_connection()
+    cursor = conexion.cursor()
+
+    consulta = 'SELECT id FROM productos WHERE id = %s;'
+    cursor.execute(consulta,(producto_id,))
+
+    fila_existe = cursor.fetchone()
+
+    if fila_existe is None:
+        cursor.close()
+        conexion.close()
+        return jsonify({'error': 'producto no encontrado'}), 404
+
+    consulta_delete = 'DELETE FROM productos WHERE id = %s;'
+
+    cursor.execute(consulta_delete,(producto_id,))
+
+    conexion.commit()
+
+    cursor.close()
+    conexion.close()
+
+    return '', 204
