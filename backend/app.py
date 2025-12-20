@@ -1,127 +1,95 @@
 from flask import Flask, jsonify, request
 import psycopg2
 
+
 app = Flask(__name__)
 
-
-def get_connection():
+def get_conn():
     return psycopg2.connect(
         host='localhost',
-        database='nico_fullsatck',
+        database='nico_fullstack',
         user='postgres',
         password='1234'
     )
+
+#--------------------
+#HELPER NICO
+#-----------------------
 
 def fila_a_dict(fila):
     if fila is None:
         return None
     
     producto = {
-        "id" : fila[0],
-        "nombre" : fila[1],
-        "precio" : float(fila[2]),
-        "stock" : fila[3],
+        'id': fila[0],
+        'nombre': fila[1],
+        'precio': float(fila[2]),
+        'stock': fila[3]
     }
 
     return producto
 
-@app.route('/productos', methods=['GET'])
+@app.route('/productos',methods=['GET'])
 def get_productos():
-    conexion = get_connection()
+    conexion = get_conn()
     cursor = conexion.cursor()
 
-    consulta = 'SELECT id, nombre, precio, stock FROM productos;'
-
-    cursor.execute(consulta)
+    cursor.execute(
+        'SELECT id, nombre, precio, stock FROM productos'
+    )
 
     filas = cursor.fetchall()
 
+    # me olvidé cerrar con y cursor
     cursor.close()
     conexion.close()
 
     resultado = []
-
     for fila in filas:
-        resultado.append(fila_a_dict(fila))
+        resultado. append(fila_a_dict(fila))
     return jsonify(resultado), 200
-    
 
-@app.route('/productos/<int:producto_id>', methods=['GET'])
-def get_por_id(producto_id):
-    conexion = get_connection()
+@app.route('/productos<int:producto_id>',methods=['GET'])
+def get_productos(producto_id):
+    conexion = get_conn()
     cursor = conexion.cursor()
 
-    consulta = 'SELECT id, nombre, precio, stock FROM productos WHERE id = %s;'
-
-    cursor.execute(consulta,(producto_id,))
+    cursor.execute('SELECT id, nombre, precio, stock FROM productos WHERE id = %s', (producto_id,))
 
     fila = cursor.fetchone()
 
+    if fila is None:
+        cursor.close()
+        conexion.close()
+        return jsonify({f'error: el id {producto_id} del producto es incorrecto'}), 404
+    
     cursor.close()
     conexion.close()
 
-
-    if fila is None:
-        jsonify({'error': 'producto no encontrado'}), 404
-    return jsonify(fila_a_dict(fila)) 
+    return jsonify(fila_a_dict(fila)), 200
 
 @app.route('/productos', methods=['POST'])
 def crear_producto():
-    datos = request.get_json()
+    datos = request.get_json() or {}
 
-    nombre = datos.get('nombre')
-    precio = datos.get('pecio')
-    stock = datos.get('stock')
+    campos = ('nombre', 'precio', 'stock')
 
-    if nombre is None or precio is None or stock is None:
-        return jsonify({'error': ' faltan datos obligatorios'}), 400
+    for campo in campos:
+        if datos.get(campo) is None:
+            return jsonify({f'error: falta campo {campo} o su valor es none'}), 400
     
-    conexion = get_connection()
+    conexion = get_conn()
     cursor = conexion.cursor()
-
     consulta = """
-        INSERT INTO productos(nombre, precio, stock)
-        VALUE (%s,%s,%s)
-        RETURNING id, nombre, precio, stock;
-        """
-    cursor.execute(consulta,(nombre,precio,stock))
-
-    fila = cursor.fetchone()
-
-    conexion.commit()
-
-    cursor.close()
-    conexion.close()
-
-    return jsonify(fila_a_dict(fila)), 201
-
-@app.route('/productos/<int:producto_id>', methods=['PUT'])
-def editar_producto(producto_id):
-    datos = request.get_json()
-
-    nombre = datos.get('nombre')
-    precio = datos.get('pecio')
-    stock = datos.get('stock')
-
-    if nombre is None or precio is None or stock is None:
-        return jsonify({'error': 'faltan datos obligatorios'}), 400
-    
-    conexion = get_connection()
-    cursor = conexion.cursor()
-
-    consulta_existe = 'SELECT id FROM producto WHERE id = %s;'
-    cursor.execute(consulta_existe,(producto_id,))
-
-    fila_existe = cursor.fetchone()
-
-    if fila_existe is None:
-        return jsonify({'error': 'producto no encontrado'}), 404
-    
-    consulta_update = """
-        UPDATE productos
-        SET nombre = %s,
-            precio = %s,
-            stock = %s
-        WHERE id = %s
+        INSERT INTO productos(nombre,precio,stock)
+        VALUES(%s,%s,%s)
         RETURNING id, nombre, precio, stock;
     """
+
+    resultado = []
+    for campo in campos:
+        resultado.append(datos[campo])
+
+    cursor.execute(consulta, resultado)
+    fila = cursor.fetchone()
+
